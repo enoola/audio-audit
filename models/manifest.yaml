@@ -1,0 +1,28 @@
+schema_version: "0.1.0"
+models:
+  activity:
+    id: silero_vad_16k_op15
+    kind: local-neural-vad
+    license: MIT (verify upstream model terms before redistribution)
+    source: https://github.com/snakers4/silero-vad
+    source_commit: 5cd7945676eb32225748052e2e6a0580e4686a08
+    file: silero_vad_16k_op15.onnx
+    sha256: 7ed98ddbad84ccac4cd0aeb3099049280713df825c610a8ed34543318f1b2c49
+    execution: local-onnxruntime-cpu
+    fallback: energy-activity-v0
+  acoustic_events:
+    id: relative-level-rule-v0
+    kind: auditable-rules
+    license: project-code
+    execution: local
+  text_events:
+    id: fr-lexical-review-rules-v0
+    kind: auditable-rules
+    license: project-code
+    execution: local
+  diarization:
+    id: null
+    enabled: false
+  neural_vad:
+    id: silero_vad_16k_op15
+    optional_extra: vad

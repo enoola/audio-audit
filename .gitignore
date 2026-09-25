@@ -1,0 +1,71 @@
+# Secrets and local configuration
+hf_key
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+.tox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Media and derived data
+# `audio` is a symlink to a media checkout outside this repo: match it without a
+# trailing slash so git does not record it as a link blob.
+audio
+/data/annotations/
+/data/splits/
+*.wav
+*.flac
+*.mp3
+*.m4a
+*.aac
+*.ogg
+*.opus
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.srt
+*.vtt
+*.tmp
+*.log
+
+# Model artifacts (binaries are provisioned by scripts/provision_models.py)
+models/*
+!models/manifest.yaml
+!models/README.md
+*.onnx
+*.onnx.data
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# Generated analysis output
+/reports/
+!reports/README.md
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

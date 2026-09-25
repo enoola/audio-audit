@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "senat-audio-audit"
+version = "0.1.0"
+description = "Local, evidence-first audio vividness and interaction analysis for French parliamentary recordings"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+license = { text = "Proprietary" }
+authors = [{ name = "Implementation team" }]
+dependencies = [
+  "numpy>=2.1,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<10",
+  "pytest-cov>=6,<8",
+  "ruff>=0.12,<1",
+  "hypothesis>=6.135,<7",
+]
+vad = [
+  "onnxruntime>=1.19,<2",
+]
+
+[project.scripts]
+senate-audio-audit = "senate_audio_audit:main"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "senate_audio_audit/**",
+  "tests/**",
+  "scripts/**",
+  "schemas/**",
+  "data/**",
+  "models/manifest.yaml",
+  "models/README.md",
+  "README.md",
+  "pyproject.toml",
+  "uv.lock",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["senate_audio_audit"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

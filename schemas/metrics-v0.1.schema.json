@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/senat-audio-audit/metrics-v0.1.schema.json",
+  "title": "Senate Audio Audit per-audio metrics snapshot",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_role",
+    "run_id",
+    "run_key",
+    "analysis_status",
+    "source",
+    "scope",
+    "pipeline",
+    "quality",
+    "measurements",
+    "summary",
+    "vividness",
+    "events",
+    "speaker_summaries",
+    "errors",
+    "review"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "artifact_role": { "const": "per_audio_latest_metrics" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "run_key": { "type": "string", "minLength": 64, "maxLength": 64 },
+    "analysis_status": {
+      "enum": ["completed", "partial", "no_speech", "not_assessable", "failed"]
+    },
+    "source": {
+      "type": "object",
+      "required": ["filename", "path", "sha256", "duration_ms", "metrics_json", "metrics_text"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "duration_ms": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "required": ["start_ms", "end_ms"],
+      "properties": {
+        "start_ms": { "type": "integer", "minimum": 0 },
+        "end_ms": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "vividness": {
+      "type": "object",
+      "required": ["score", "status", "confidence_band", "explanation"],
+      "properties": {
+        "score": { "type": ["integer", "null"], "minimum": 0, "maximum": 10 },
+        "status": {
+          "enum": ["not_assessable", "provisional_rubric", "pilot_calibrated", "validated"]
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "event_id",
+          "claim_type",
+          "epistemic_status",
+          "decision_state",
+          "start_ms",
+          "end_ms",
+          "score_semantics",
+          "signal_strengths",
+          "evidence",
+          "review_status"
+        ]
+      }
+    },
+    "speaker_summaries": { "type": "array" },
+    "errors": { "type": "array" },
+    "review": { "type": "object" }
+  },
+  "additionalProperties": true
+}
