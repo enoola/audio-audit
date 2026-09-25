@@ -1,9 +1,9 @@
 # Implementation Progress
 
 **Project:** `senat-audio-audit`  
-**Plan:** `implementation-plan_v0.1.md`  
+**Plan:** `implementation-plan_v0.1.md` (+ `implementation-plan-visualizer.md`)  
 **Started:** 2026-09-24  
-**Current milestone:** Implementation complete — MVP handoff  
+**Current milestone:** Visualizer complete — MVP handoff plus local review view  
 **Status:** Complete
 
 ## Scope of this implementation pass
@@ -35,6 +35,54 @@ The full corpus will not be analyzed until source-rights status is documented. T
 - Per-audio output format: latest JSON + text plus append-only JSONL + text history.
 - Vividness remains `provisional_rubric` until human calibration exists.
 
+## Scope of the visualizer pass (M10)
+
+Add a local, read-only web view over metrics that have already been committed, so a
+reviewer can see *where* in a recording its candidate events fall in time and hear the
+audio behind each one, instead of reading timestamped text lines and seeking an
+external player.
+
+- `senate-audio-audit visualize PATH` serves a page on `127.0.0.1` and opens a browser;
+- three timeline lanes: a dBFS loudness envelope, a speech-activity strip, and the
+  candidate events, with click-to-seek and per-event playback that stops at the event end;
+- the measured metrics, the vividness score with its provisional status, the per-event
+  evidence, and the recorded warnings are all rendered from the existing snapshot;
+- a display-only, regenerable `<stem>.timeline.json` sidecar supplies the time series a
+  snapshot does not store.
+
+The visualizer deliberately runs **no inference, changes no metric, alters no existing
+artifact, and records no review decision**. `review_status` renders read-only;
+`senate-audio-audit review` remains the only way to record a decision.
+
+### Visualizer decisions
+
+- Loopback-only bind; a non-loopback host is refused rather than flagged.
+- No client-supplied filesystem paths, no mutating HTTP method, `Host` validation, no
+  CORS, and a per-session token, because any page open in the browser can request
+  `127.0.0.1`.
+- `Range` support is mandatory: `SimpleHTTPRequestHandler` cannot seek an 85 MB,
+  89-minute recording.
+- The browser must never call `decodeAudioData`: that file is ~2 GB of Float32.
+- No new runtime dependency, no build step, and no external asset, so the page renders
+  fully offline.
+
+### Visualizer verification
+
+- 133 tests pass (40 MVP + 93 visualizer), including 24 static UI guards; ruff and
+  format clean; `app.js` syntax checked.
+- Reference recording, 89:03.033: cold sidecar build 15.7 s, sidecar 59,265 bytes,
+  served payload 102,351 bytes; range responses byte-exact against the source file.
+- Security surface confirmed against a live server: `206`/`416` for ranges, `501` for
+  `POST`/`PUT`/`DELETE`, `403` for a foreign `Host` and a missing token, `404` for
+  traversal, and no absolute local paths in the served payload.
+- Verified in-browser: 41 events listed, click-to-seek, per-event playback
+  (4.750 → 25.499 s, auto-paused), filters, `J`/`K` stepping, `Ctrl`+wheel zoom, and
+  zero console errors.
+- Two layout defects were found only by looking at the rendered page — an opaque
+  playhead canvas that hid every lane, and lane heights drifting from the canvas
+  aspect ratio. Both are fixed and pinned by mutation-checked guards. See
+  `implementation-plan-visualizer.md` §13.2.
+
 ## Milestones
 
 | ID | Milestone | Status | Notes |
@@ -49,6 +97,7 @@ The full corpus will not be analyzed until source-rights status is documented. T
 | M7 | CLI and review command | Complete | `analyze`, rights-gated `batch`, `inspect`, `validate`, `metrics`, `review`, `rebuild-report`, `doctor` |
 | M8 | Automated tests | Complete | 40 tests covering parsing, VAD, media, scoring, lifecycle, recovery, CLI, no-audio abstention |
 | M9 | Documentation and handoff | Complete | README, schema, model provisioning, progress log, and clean-install handoff verified |
+| M10 | Local metrics visualizer | Complete | `visualize` CLI, loopback read-only server, three-lane timeline, display-only sidecar |
 
 ## Acceptance checkpoint for this pass
 
@@ -98,9 +147,42 @@ The implementation pass is complete when:
 - Wheel and source distribution built successfully; the console entry point works from the built wheel.
 - `implementation-plan_v0.md` was not edited; its recorded SHA-256 is `fc8feec04f9a9865f77d701b6b930c3adc5198944298ff32239503f46647aead`.
 
+### 2026-09-25 — Local metrics visualizer
+
+- Created `implementation-plan-visualizer.md` and the `feat/visualizer` branch.
+- Added `senate_audio_audit/visualizer/` with `timeline.py` (display-only sidecar),
+  `server.py` (loopback read-only HTTP server), and `ui/` (vanilla HTML/CSS/JS).
+- Added the `visualize` subcommand, `schemas/timeline-v0.1.schema.json`, the
+  `ui/` wheel artifacts entry, and README documentation.
+- Implemented `Range` support so an 85 MB, 89-minute recording can be scrubbed, plus
+  loopback binding, a fixed route table, `Host` validation, a session token, and
+  absolute-path scrubbing of the served payload.
+- Confirmed the recomputed activity lane matches the committed metrics exactly
+  (`speech_ratio` 0.936133) and that the recorded method is
+  `silero-vad+transcript-fallback`, so the lane is labelled as transcript-derived
+  rather than presented as VAD-detected speech.
+- Found and corrected three data-driven issues: the transcript-fallback provenance, a
+  median reference line that did not represent the envelope's own median, and a
+  `quality.vad_model.model_path` leak of a local home directory.
+- Found and corrected two layout defects by inspecting the rendered page: an opaque
+  playhead canvas that hid all lanes, and lane heights derived from the canvas aspect
+  ratio. Added 24 static UI guards and mutation-checked them.
+- Recorded that visual rendering cannot be proven by assertions about bytes and data,
+  and that the invariants reachable by static tests are now asserted.
+
 ## Remaining limitations
 
 - Diarization is an explicit future adapter: speaker summaries and speaker IDs remain unavailable in this MVP rather than guessed.
 - Sarcasm, anger expression, and disrespect outputs are candidate/review states, not probabilities or claims about internal states.
 - The vividness rubric is not human-calibrated; the corpus must not be batch-processed until rights and intended-use approval is recorded in `data/sources.csv`.
 - The implementation is an MVP, not a validated research or publication system; human review and calibration remain required.
+- The visualizer adds no new claim: it displays the same candidates, carries the same
+  provisional and uncalibrated labels, and cannot record a review decision.
+- The visualizer's loudness envelope is a display aid from an independent decode pass,
+  not a measurement, and is never merged into the metrics JSON.
+- The activity lane follows the backend the metrics recorded, and for the reference
+  recording that lane is transcript-cue coverage rather than VAD-detected speech; the
+  page states this.
+- Event boundaries derive from 30 ms VAD frames, are not sample-accurate, and the page
+  exposes a playback tolerance rather than implying exactness.
+- Diarization remains disabled, so the visualizer attributes nothing to named speakers.
