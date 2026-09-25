@@ -497,11 +497,22 @@ function drawRuler() {
 function drawPlayhead() {
   const audio = $("audio");
   const canvas = $("cPlay");
+  const lanes = document.querySelector(".lanes");
+  const first = $("cEnv");
+  const last = $("cRuler");
+  if (!lanes || !first || !last) return;
+  const stackHeight = Math.round(
+    last.getBoundingClientRect().bottom - first.getBoundingClientRect().top
+  );
+  if (stackHeight > 0) canvas.style.height = `${stackHeight}px`;
+
   const ratio = window.devicePixelRatio || 1;
   const width = canvas.clientWidth || 800;
-  const height = canvas.clientHeight || 208;
-  canvas.width = Math.round(width * ratio);
-  canvas.height = Math.round(height * ratio);
+  const height = canvas.clientHeight || stackHeight || 208;
+  if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+  }
   const ctx = canvas.getContext("2d");
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   ctx.clearRect(0, 0, width, height);
@@ -744,8 +755,10 @@ function wire() {
   const lanes = document.querySelector(".lanes");
   lanes.addEventListener("wheel", (wheelEvent) => {
     wheelEvent.preventDefault();
-    const rect = lanes.getBoundingClientRect();
-    const ratio = (wheelEvent.clientX - rect.left - 9.6) / (rect.width - 19.2);
+    // Measure the lane content box rather than assuming the container's padding,
+    // so the zoom anchor matches the canvas the user is pointing at.
+    const rect = $("cEnv").getBoundingClientRect();
+    const ratio = rect.width > 0 ? (wheelEvent.clientX - rect.left) / rect.width : 0.5;
     const anchor = state.view.start + ratio * (state.view.end - state.view.start);
     if (wheelEvent.ctrlKey || wheelEvent.metaKey) {
       const factor = wheelEvent.deltaY > 0 ? 1.25 : 0.8;

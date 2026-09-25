@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 import threading
 import time
 import urllib.request
@@ -348,40 +347,7 @@ def test_wait_closed_returns_once_the_server_stops(media_file: Path) -> None:
 
 
 # -- packaged assets -----------------------------------------------------
-def test_ui_assets_are_importable_from_the_package() -> None:
-    """A wheel that omits the assets would make every page load a 404."""
-    from senate_audio_audit.visualizer.server import _ui_asset
-
-    for name, marker in (
-        ("index.html", '<audio id="audio"'),
-        ("app.css", "--bg"),
-        ("app.js", "boot();"),
-    ):
-        body = _ui_asset(name).decode("utf-8")
-        assert marker in body, f"{name} does not contain {marker!r}"
-
-
-def test_app_js_records_the_no_decode_invariant() -> None:
-    """The 2 GB decode trap is documented in the file that must never walk into it."""
-    from senate_audio_audit.visualizer.server import _ui_asset
-
-    source = _ui_asset("app.js").decode("utf-8")
-    assert "must never call decodeAudioData" in source
-    # Strip comments: the warning itself names the API, but no code may invoke it.
-    code = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
-    code = re.sub(r"//[^\n]*", "", code)
-    assert "decodeAudioData" not in code
-
-
-def test_index_page_has_no_external_references() -> None:
-    """The page must render fully offline, so no CDN or remote asset is allowed."""
-    from senate_audio_audit.visualizer.server import _ui_asset
-
-    page = _ui_asset("index.html").decode("utf-8")
-    for scheme in ("http://", "https://", "//cdn"):
-        assert scheme not in page, f"index.html references {scheme}"
-
-
+# -- packaged assets -----------------------------------------------------
 def test_session_exposes_its_port(media_file: Path) -> None:
     config = VisualizerConfig(port=0, open_browser=False, require_token=False).validated()
     state = build_state(snapshot_dict(), media_path=media_file, timeline=None, config=config)

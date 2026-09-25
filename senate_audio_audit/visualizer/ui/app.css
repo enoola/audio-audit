@@ -120,8 +120,21 @@ input[type=number] { width: 5rem; cursor: text; }
   letter-spacing: 0.05em; color: var(--faint); margin-bottom: 0.15rem;
 }
 .lanelabel em { font-style: normal; text-transform: none; color: var(--dim); }
+/* Explicit heights are required, not cosmetic. With only `width: 100%`, a canvas
+   derives its rendered height from its intrinsic aspect ratio — and prep() rewrites
+   the backing store (width/height * devicePixelRatio) on every redraw, so the lanes
+   would drift to wrong heights as the ratio changed. Fixing the CSS height breaks
+   that feedback loop. */
 canvas { display: block; width: 100%; border-radius: 4px; background: #0b0e13; cursor: crosshair; }
-.playhead { position: absolute; top: 0; left: 0.6rem; right: 0.6rem; height: 208px; pointer-events: none; z-index: 3; }
+#cEnv { height: 86px; }
+#cAct { height: 42px; }
+#cEvents { height: 58px; }
+#cRuler { height: 22px; }
+/* The playhead spans the whole lane stack, so its height is set from JS to match the
+   measured lane block rather than being hard-coded. It MUST stay transparent: it is
+   an absolutely positioned overlay on top of the lanes, so the shared `canvas`
+   background rule would paint an opaque panel over every lane and label. */
+.playhead { position: absolute; top: 0; left: 0.6rem; right: 0.6rem; background: transparent; border-radius: 0; cursor: default; pointer-events: none; z-index: 3; }
 .tooltip {
   position: absolute; z-index: 5; pointer-events: none; max-width: 340px;
   padding: 0.4rem 0.55rem; background: #0b0e13; border: 1px solid var(--line);

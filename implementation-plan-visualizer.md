@@ -602,6 +602,13 @@ Extend the existing suite (currently 40 tests, `pytest`, `ruff` line-length 100,
   after first load.
 - Assert in `app.js` (via a documented invariant comment) that no `decodeAudioData`
   call exists.
+- **`tests/test_visualizer_ui.py`** (added after §13.2) statically asserts the
+  invariants a unit test *can* reach: explicit lane heights, a transparent
+  non-interactive playhead overlay, id agreement between HTML and JS, the
+  `timeupdate` stop guard, tolerance arithmetic, the 2 px event-bar floor, the
+  documented keyboard bindings, activity-lane provenance labeling, and that the
+  vividness score is never rendered without its uncalibrated status. These guards
+  are mutation-checked, not merely green.
 
 **Regression guard:** `ruff check`, `python -m compileall`, and the full suite must
 pass. `uv sync --locked --python 3.12 --extra dev --extra vad` must remain clean, and
@@ -619,8 +626,8 @@ the wheel must build with the `visualizer/ui/**` assets included.
 | V3 | Page shell and summary | Complete | transport, header, tiles, vividness, limitations, not-assessable state |
 | V4 | Lanes and zoom/pan | Complete | envelope, activity, events, ruler; 2 px min event bar |
 | V5 | Event interaction | Complete | seek, play-span, replay, tolerance, detail panel, filters, keyboard |
-| V6 | Tests and packaging | Complete | 111 tests total, wheel ships `ui/`, README documented |
-| V7 | Acceptance audit | Complete | verified against the 89-minute reference; see §13.1 |
+| V6 | Tests and packaging | Complete | 133 tests total, wheel ships `ui/`, README documented |
+| V7 | Acceptance audit | Complete | verified in-browser against the reference; see §13.1–13.2 |
 
 ---
 
@@ -704,6 +711,43 @@ Three corrections were made because the real data contradicted the plan:
 The 15.7 s cold build also retires the main performance risk: on this hardware the
 second decode pass is cheap, and it is cached afterwards. Persisting the envelope
 during `analyze` (§14.3) remains worthwhile but is no longer urgent.
+
+### 13.2 What visual verification caught that the test suite could not
+
+The first pass was committed with "no browser was connected" recorded as a known
+gap. Once a browser was available, two layout bugs appeared immediately on screen.
+Both were invisible to every test: the HTTP layer served correct bytes, the payload
+was correct, and the canvases contained correctly drawn pixels.
+
+1. **The playhead hid every lane.** `<canvas id="cPlay">` is a canvas, so the shared
+   `canvas { background: #0b0e13 }` rule painted it opaque. At `z-index: 3` over the
+   lane stack it covered all three lanes *and* their labels. The lanes had been drawn
+   correctly the whole time — a pixel census showed the activity lane 98% painted and
+   the events lane 72% — and were simply invisible. Fixed by making `.playhead`
+   transparent and non-interactive. This was the severe one: the page looked
+   functional and the table was perfect, so it would have shipped as "the timeline
+   does not render".
+
+2. **Lane heights drifted.** `canvas { width: 100% }` with no explicit height makes a
+   canvas derive its rendered height from its intrinsic aspect ratio, and `prep()`
+   rewrites the backing store (`width * devicePixelRatio`) on every redraw, so the
+   ratio — and therefore the height — changed between draws (envelope 86 → 111 px,
+   activity 42 → 54, events 58 → 75). Fixed with explicit per-lane heights.
+
+Both are now pinned by `tests/test_visualizer_ui.py`, which was **mutation-checked**:
+reintroducing each bug in `app.css` makes 6 of its 24 tests fail. The lesson is
+recorded rather than quietly fixed: layout defects in a canvas UI are invisible to
+assertions about bytes and data, so the invariants that unit tests *can* express
+(explicit heights, transparent overlay, id agreement, keyboard bindings, the
+`timeupdate` stop guard) are asserted statically, and the rest still needs a human
+eye on a real page.
+
+Confirmed working in-browser against the 89-minute reference: all 41 events in the
+table, click-to-seek to 5.000 s, `▶` playing 4.750 → 25.499 s and auto-pausing
+("event ended · paused", within one 4 Hz `timeupdate` tick of the 25.250 s target),
+filters (20 of 41 `uncertain_candidate`, 23 of 41 `relative_loud_delivery`), `J`/`K`
+event stepping, `Esc`, `Ctrl`+wheel zoom (ruler switching from 15-minute to
+5-minute ticks), and zero console errors.
 
 ---
 
