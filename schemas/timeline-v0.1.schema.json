@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/senat-audio-audit/timeline-v0.1.schema.json",
+  "title": "Visualizer display-only timeline sidecar",
+  "description": "Regenerable rendering aid for the local visualizer. This artifact is NOT a metrics artifact: it holds no inference result, no event list, and no finding. Events remain solely in the per-audio metrics snapshot.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_role",
+    "cache_key",
+    "source_sha256",
+    "scope_start_ms",
+    "scope_end_ms",
+    "duration_ms",
+    "bucket_ms",
+    "bucket_count",
+    "envelope",
+    "activity",
+    "warnings",
+    "generator"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "artifact_role": { "const": "visualizer_timeline" },
+    "cache_key": { "type": "string", "minLength": 1 },
+    "run_id": { "type": ["string", "null"] },
+    "run_key": { "type": ["string", "null"] },
+    "source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "scope_start_ms": { "type": "integer", "minimum": 0 },
+    "scope_end_ms": { "type": "integer", "minimum": 1 },
+    "duration_ms": { "type": "integer", "minimum": 1 },
+    "bucket_ms": { "type": "integer", "minimum": 50, "maximum": 60000 },
+    "bucket_count": { "type": "integer", "minimum": 1 },
+    "envelope": {
+      "type": "object",
+      "description": "Loudness display curve. Values are dBFS multiplied by scale; they are not metrics.",
+      "required": [
+        "available",
+        "unit",
+        "scale",
+        "floor_dbfs",
+        "reference_dbfs",
+        "reference_label",
+        "reference_note",
+        "values"
+      ],
+      "properties": {
+        "available": { "type": "boolean" },
+        "unit": { "const": "dbfs" },
+        "scale": { "type": "integer", "minimum": 1 },
+        "floor_dbfs": { "type": "number" },
+        "reference_dbfs": {
+          "type": ["number", "null"],
+          "description": "active_speech_median_dbfs, offered as a labeled reference only; it is not the median of the envelope."
+        },
+        "reference_label": { "type": "string" },
+        "reference_note": { "type": "string" },
+        "values": {
+          "type": "array",
+          "items": { "type": "integer" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "activity": {
+      "type": "object",
+      "description": "Speech-activity display strip. Values are the speech fraction of each bucket times 255. The method and backend must be rendered: a transcript-fallback lane is not VAD-detected speech.",
+      "required": ["available", "method", "backend", "speech_ratio", "agrees_with_snapshot", "values"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "method": { "type": ["string", "null"] },
+        "backend": { "type": ["string", "null"] },
+        "speech_ratio": { "type": ["number", "null"] },
+        "agrees_with_snapshot": { "type": ["boolean", "null"] },
+        "values": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 255 }
+        }
+      },
+      "additionalProperties": true
+    }
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "generator": {
+      "type": "object",
+      "required": ["timeline_version", "sample_rate", "frame_ms"],
+      "properties": {
+        "timeline_version": { "const": "0.1.0" },
+        "sample_rate": { "type": "integer", "minimum": 1 },
+        "frame_ms": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

@@ -4,7 +4,7 @@
 **Branch:** `feat/visualizer`
 **Plan:** `implementation-plan-visualizer.md`
 **Date:** 2026-09-25
-**Status:** Planned — not started
+**Status:** Implemented — V0…V7 complete
 **Base plan:** `implementation-plan_v0.1.md`
 
 ---
@@ -318,13 +318,11 @@ total well under 60 KB uncompressed.
 │           poor · level −37.7 dBFS med · p95 −24.9 · rate 149.7   │
 │           wpm · F0 var 4.96 st · clipping 0.0 · events 41        │
 ├──────────────────────────────────────────────────────────────────┤
-│ OVERVIEW  full-duration minimap: envelope + event density        │
-├──────────────────────────────────────────────────────────────────┤
-│ TIMELINE  lane 1  loudness envelope (dBFS)                       │
+│ TIMELINE  ruler   time ticks (click to seek)                    │
+│           lane 1  loudness envelope (dBFS) + median reference    │
 │           lane 2  speech activity (0–100%)                       │
 │           lane 3  candidate events (color = claim_type,          │
 │                     hatch = uncertain_candidate)                │
-│           ruler   time ticks                                     │
 │           playhead + zoom/pan + hover tooltip                    │
 ├──────────────────────────────────────────────────────────────────┤
 │ EVENTS    filter: [type ▾] [state ▾] [review ▾]   41 shown      │
@@ -340,21 +338,32 @@ total well under 60 KB uncompressed.
 
 ### 6.2 Lanes
 
-1. **Loudness envelope** — filled area path, dBFS on a fixed domain (e.g. −80…0) so
-   recordings are visually comparable. A horizontal reference line at the snapshot's
-   `active_speech_median_dbfs` makes "this moment is louder than typical" readable at a
-   glance, which is exactly the evidence the loud-delivery rule uses.
+1. **Loudness envelope** — filled area path, dBFS on a fixed domain (−80…0) so
+   recordings are visually comparable. A dashed reference line marks
+   `active_speech_median_dbfs`, **with its caveat attached**: that value is a per-frame
+   median over active speech, whereas the envelope is a per-bucket energy average over
+   all audio, and on the reference recording only 1,212 of 5,344 buckets fall within
+   3 dB of it. The sidecar therefore ships `reference_dbfs`, `reference_label`, and
+   `reference_note`, and the page renders the note rather than implying the line is
+   the envelope's own median.
 2. **Speech activity** — one column per bucket, opacity by speech fraction. For the
    reference file (93.6% speech) this lane is nearly solid; it is still shown because it
    makes the silences legible and would matter for a sparser recording.
+
+   **The lane must always be labelled with its provenance.** The reference recording's
+   recorded method is `silero-vad+transcript-fallback`: Silero found no reliable speech
+   and the pipeline fell back to SRT cue intervals, so this lane is effectively
+   transcript coverage rather than VAD-detected speech. The page reads `activity.method`
+   and the sidecar warnings and states this in plain language; a lane silently implying
+   VAD would overstate the evidence. See §13.1.
 3. **Candidate events** — one bar per event, `start_ms → end_ms`, aligned to the same
    time axis.
    - Fill = `claim_type` (2 types in the current corpus → 2 colors).
    - Hatched or outlined = `uncertain_candidate` vs solid = `supported_candidate`.
    - Opacity/outline = `review_status` (all `unreviewed` today).
-   - Because at full zoom a 20 s event in an 89-minute file is ~0.4 px wide, events
-     have a **minimum rendered width of 2 px** and the bar is drawn from a per-bucket
-     max-intensity map so overlapping events remain visible.
+   - The shortest events in the reference corpus are 5 s, which is ~1.35 px at 1440 px
+     across an 89-minute timeline (6 of 41 events fall under 2 px there), so events
+     have a **minimum rendered width of 2 px**.
 
 **No transcript lane in v1.** With 1 of 41 events carrying a transcript, a dedicated
 lane would be nearly empty. The one available transcript is rendered in the detail
@@ -376,9 +385,11 @@ panel instead. Deferred to §14.
   operation is a requirement, not a nicety — reviewing 41 events with a mouse is slow.
 - **Filters:** by `claim_type`, `decision_state`, `review_status`. Filtering hides
   non-matching bars *and* table rows, and shows "N of 41 shown".
-- **Overview minimap:** a full-duration strip showing envelope plus event density, with
-  a draggable viewport rectangle indicating the zoom window. Essential for orientation
-  in an 89-minute file.
+- **Ruler-first layout.** The time ruler sits above the lanes rather than below, and
+  acts as the primary seek surface. A separate full-duration overview minimap was
+  dropped: with only three lanes and a clickable ruler, `0` to reset, `J`/`K` to step
+  between events, and a filterable table, it added a fourth surface to maintain
+  without solving a problem the event table does not already answer.
 
 ### 6.4 Rendering approach
 
@@ -603,13 +614,13 @@ the wheel must build with the `visualizer/ui/**` assets included.
 | ID | Milestone | Status | Notes |
 |---|---|---|---|
 | V0 | Branch and plan | Complete | `feat/visualizer`; this document |
-| V1 | Timeline sidecar | Planned | `timeline.py`, schema, envelope + activity builder, cache |
-| V2 | Range-capable server | Planned | loopback bind, route table, payload, path stripping |
-| V3 | Page shell and summary | Planned | transport, header, summary, limitations, not-assessable state |
-| V4 | Lanes and zoom/pan | Planned | envelope, activity, events, ruler, minimap |
-| V5 | Event interaction | Planned | seek, play-span, replay, tolerance, detail panel, filters, keyboard |
-| V6 | Tests and packaging | Planned | timeline/server/CLI tests, sdist+wheel assets, README |
-| V7 | Acceptance audit | Planned | reference-recording walkthrough, offline check, clean-install check |
+| V1 | Timeline sidecar | Complete | `visualizer/timeline.py`, `schemas/timeline-v0.1.schema.json`, 27 tests |
+| V2 | Range-capable server | Complete | `visualizer/server.py`; 206/416, loopback bind, route table, path scrubbing |
+| V3 | Page shell and summary | Complete | transport, header, tiles, vividness, limitations, not-assessable state |
+| V4 | Lanes and zoom/pan | Complete | envelope, activity, events, ruler; 2 px min event bar |
+| V5 | Event interaction | Complete | seek, play-span, replay, tolerance, detail panel, filters, keyboard |
+| V6 | Tests and packaging | Complete | 111 tests total, wheel ships `ui/`, README documented |
+| V7 | Acceptance audit | Complete | verified against the 89-minute reference; see §13.1 |
 
 ---
 
@@ -644,6 +655,58 @@ The visualizer pass is complete when:
 
 ---
 
+### 13.1 Verified during implementation
+
+Measured against the reference recording (89:03.033, 85,489,101 bytes, 41 events),
+not estimated:
+
+| Check | Result |
+|---|---|
+| Timeline build, cold | **15.7 s** (plan budgeted 30–90 s) |
+| Sidecar payload | **59,265 bytes** (budget < 60 KB) |
+| Buckets at 1000 ms | 5,344 |
+| Served `/api/payload` | 102,351 bytes total |
+| `Range: bytes=0-1023` | `206`, `Content-Range: bytes 0-1023/85489101` |
+| `Range: bytes=-4096` | `206`, correct tail offset |
+| `Range: bytes=999999999-` | `416` with `Content-Range: bytes */85489101` |
+| Byte-exactness | served range matches the file byte-for-byte (sha256 compared) |
+| `Accept-Ranges` on `200` | present, so the browser can seek |
+| `POST /api/payload` | `501` (no write path) |
+| `Host: evil.example.com` | `403` |
+| Missing token | `403` |
+| Wheel install | `ui/index.html`, `app.css`, `app.js` load from the installed wheel |
+| Envelope vs recorded median | 1,212 / 5,344 buckets within 3 dB (see below) |
+| Activity lane vs metrics | `speech_ratio` 0.936133 — **matches the snapshot exactly** |
+
+Three corrections were made because the real data contradicted the plan:
+
+1. **The activity lane is transcript-derived, not VAD.** The recorded
+   `activity_method` is `silero-vad+transcript-fallback` and carries the warning
+   *"VAD found no reliable speech; transcript intervals were used as low-confidence
+   fallback."* Silero found nothing usable, so the lane is effectively the SRT cue
+   coverage. The page now labels the lane with its `method`, and §6.2/§6.6 were
+   amended so the UI states this instead of implying VAD-detected speech. The
+   sidecar test `test_activity_lane_records_its_provenance` guards it.
+2. **The envelope median reference line would have misled.** Only 1,212 of 5,344
+   buckets fall within 3 dB of `active_speech_median_dbfs`, because that is a
+   per-frame median over *active speech* while the envelope is a per-bucket energy
+   average over *all* audio. Rather than draw it as the envelope's own median, the
+   sidecar ships `reference_dbfs` with `reference_label` and `reference_note`, and
+   the page renders the caveat.
+3. **A keyed path denylist leaked a home directory.** `quality.vad_model.model_path`
+   was served verbatim, exposing `/Users/enola/...`. Scrubbing is now
+   value-based (any absolute path-shaped string) with a shape test that requires
+   multiple segments and a file extension, so French transcript text containing
+   slashes is not mangled. Covered by
+   `test_scrub_paths_catches_paths_under_unexpected_keys` and
+   `test_scrub_paths_does_not_mangle_prose`.
+
+The 15.7 s cold build also retires the main performance risk: on this hardware the
+second decode pass is cheap, and it is cached afterwards. Persisting the envelope
+during `analyze` (§14.3) remains worthwhile but is no longer urgent.
+
+---
+
 ## 14. Risks, limitations, and deferred work
 
 ### 14.1 Risks
@@ -656,7 +719,7 @@ The visualizer pass is complete when:
 | Visual confidence misread as evidence | Medium | Persistent provisional banner, verbatim limitation footer, no verdicts |
 | Stale snapshot paired with changed audio | Medium | `sha256` verification with a visible warning |
 | Browser OOM if someone decodes audio client-side | Low | Documented invariant; envelope is precomputed |
-| 41+ events clutter the timeline at full zoom | Low | Overview minimap, 2 px minimum bar width, filters, zoom |
+| 41+ events clutter the timeline at full zoom | Low | 2 px minimum bar width, filters, `J`/`K` stepping, `0` reset |
 | Unbounded growth of `events` in future snapshots | Low | Canvas rendering; filters; table virtualization if > 500 |
 
 ### 14.2 Known limitations of the visualizer

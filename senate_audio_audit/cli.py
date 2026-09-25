@@ -73,6 +73,34 @@ def build_parser() -> argparse.ArgumentParser:
     rebuild.add_argument("--metrics-dir", type=Path, default=_DEFAULT_METRICS)
     rebuild.add_argument("--output", type=Path, default=_DEFAULT_LEDGER)
 
+    visualize = subparsers.add_parser(
+        "visualize",
+        help="Open a local, read-only web view of one recording's committed metrics",
+    )
+    visualize.add_argument("path", type=Path)
+    visualize.add_argument("--metrics-dir", type=Path, default=_DEFAULT_METRICS)
+    visualize.add_argument("--input-root", type=Path)
+    visualize.add_argument(
+        "--timeline-bucket-ms", type=int, default=1000, help="Timeline bucket width"
+    )
+    visualize.add_argument(
+        "--timeline-activity",
+        choices=("match", "auto", "energy", "silero"),
+        default="match",
+        help="Activity lane backend; match follows what the metrics recorded",
+    )
+    visualize.add_argument("--vad-model", type=Path, help="Explicit local Silero ONNX model path")
+    visualize.add_argument(
+        "--rebuild-timeline", action="store_true", help="Recompute the cached timeline"
+    )
+    visualize.add_argument("--port", type=int, default=0, help="0 selects a free port")
+    visualize.add_argument("--no-browser", action="store_true")
+    visualize.add_argument(
+        "--skip-verify", action="store_true", help="Skip the media SHA-256 check"
+    )
+    visualize.add_argument("--idle-timeout", type=float, default=1800.0)
+    visualize.add_argument("--verbose", action="store_true")
+
     subparsers.add_parser("doctor", help="Check the local runtime and required executables")
     return parser
 
@@ -297,6 +325,102 @@ def command_rebuild(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_visualize(args: argparse.Namespace) -> int:
+    from .visualizer import TimelineConfig, load_or_build_timeline
+    from .visualizer.server import (
+        VisualizerConfig,
+        VisualizerSession,
+        build_state,
+    )
+
+    media = probe_media(args.path)
+    paths = metrics_paths(
+        args.path,
+        args.metrics_dir,
+        args.input_root or args.path.parent,
+        media.sha256,
+    )
+    snapshot = read_latest(paths)
+    if snapshot is None:
+        raise InputError(
+            f"No committed metrics found for {args.path}: expected {paths.latest_json}. "
+            f"Run 'senate-audio-audit analyze {args.path}' first."
+        )
+
+    status = str(snapshot.get("analysis_status", "unknown"))
+    if status == "failed":
+        recorded = "; ".join(
+            f"{item.get('stage', 'unknown')}: {item.get('message', '')}"
+            for item in snapshot.get("errors", [])
+        )
+        raise InputError(
+            f"The latest analysis for this recording failed and cannot be visualized "
+            f"({recorded or 'no recorded detail'})"
+        )
+    if status == "not_assessable":
+        print(
+            f"NOTE: this recording is marked not_assessable "
+            f"({snapshot.get('summary', {}).get('status_note', 'no detail')}). "
+            "The page will explain why and show no timeline lanes.",
+            file=sys.stderr,
+        )
+
+    config = TimelineConfig(
+        bucket_ms=args.timeline_bucket_ms,
+        activity_backend=args.timeline_activity,
+    ).validated()
+    artifact = load_or_build_timeline(
+        paths,
+        args.path,
+        snapshot,
+        config,
+        vad_model=args.vad_model,
+        force=args.rebuild_timeline,
+    )
+
+    if not args.skip_verify:
+        recorded_sha = str(snapshot.get("source", {}).get("sha256", ""))
+        if recorded_sha and recorded_sha != media.sha256:
+            print(
+                f"WARNING: the media SHA-256 does not match the snapshot.\n"
+                f"  snapshot: {recorded_sha}\n"
+                f"  on disk : {media.sha256}\n"
+                f"The audio you hear is not the analyzed source. Re-run 'analyze'.",
+                file=sys.stderr,
+            )
+
+    server_config = VisualizerConfig(
+        port=args.port,
+        open_browser=not args.no_browser,
+        idle_timeout=args.idle_timeout,
+        verbose=args.verbose,
+    ).validated()
+    state = build_state(
+        snapshot, media_path=args.path, timeline=artifact.payload, config=server_config
+    )
+
+    if not artifact.payload["envelope"]["available"]:
+        print(
+            "NOTE: timeline lanes are unavailable; the page will show events and metrics only.",
+            file=sys.stderr,
+        )
+
+    print(f"file      : {media.filename}")
+    print(f"run       : {snapshot.get('run_id')} ({status})")
+    print(f"events    : {len(snapshot.get('events', []))}")
+    print(f"timeline  : {artifact.path} ({'rebuilt' if artifact.rebuilt else 'cached'})")
+    print("serving   : loopback only, read-only; no review decisions are recorded here")
+    print("press Ctrl-C to stop")
+
+    with VisualizerSession(state, server_config) as session:
+        print(f"url       : {session.url}")
+        try:
+            session.wait_closed()
+        except KeyboardInterrupt:
+            print("\nstopping")
+    return 0
+
+
 def command_doctor(_: argparse.Namespace) -> int:
     try:
         _, vad_metadata = create_activity_detector("auto")
@@ -372,6 +496,7 @@ def main(argv: list[str] | None = None) -> int:
         "metrics": command_metrics,
         "review": command_review,
         "rebuild-report": command_rebuild,
+        "visualize": command_visualize,
         "doctor": command_doctor,
     }
     try:

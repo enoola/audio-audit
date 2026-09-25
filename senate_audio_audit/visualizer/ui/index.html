@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio Audit Visualizer</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div id="boot" class="boot">Loading metrics…</div>
+
+<main id="page" hidden>
+  <header class="bar">
+    <div class="ident">
+      <h1 id="filename">—</h1>
+      <p class="meta">
+        <span id="duration">—</span>
+        <span class="dot">·</span>
+        run <code id="runid">—</code>
+        <span class="dot">·</span>
+        <span id="status" class="badge">—</span>
+      </p>
+    </div>
+    <p class="disclaimer" role="note">
+      Provisional research output. Describes observable or perceived behaviour only —
+      not emotion, intent, identity, or character. Human review is required before
+      quoting or publishing any event.
+    </p>
+  </header>
+
+  <div id="alerts" class="alerts" role="status"></div>
+
+  <section class="transport" aria-label="Playback">
+    <button id="play" class="primary" aria-label="Play or pause">▶</button>
+    <button id="back5" title="Back 5 seconds">−5s</button>
+    <button id="fwd5" title="Forward 5 seconds">+5s</button>
+    <span class="clock"><output id="pos">00:00:00.000</output> / <span id="total">—</span></span>
+    <label class="rate">Speed
+      <select id="rate">
+        <option>0.5</option><option>0.75</option><option selected>1</option>
+        <option>1.25</option><option>1.5</option><option>2</option>
+      </select>
+    </label>
+    <label class="tol">Event tolerance
+      <input id="tol" type="number" min="0" max="5000" step="50" value="250"> ms
+    </label>
+    <span class="spacer"></span>
+    <span id="playmode" class="badge subtle">—</span>
+  </section>
+
+  <section class="summary" aria-label="Summary metrics">
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section class="vividness" id="vividness">
+    <div class="vhead">
+      <span class="vlabel">Audio vividness</span>
+      <span id="vscore" class="vscore">—</span>
+      <span id="vstatus" class="badge warn">—</span>
+    </div>
+    <div class="meter"><div id="vmeter" class="meterfill"></div></div>
+    <p id="vexplain" class="small"></p>
+  </section>
+
+  <section class="timeline" aria-label="Timeline">
+    <div class="lanes">
+      <div class="lane">
+        <span class="lanelabel">Loudness envelope <em>dBFS</em></span>
+        <canvas id="cEnv" height="86"></canvas>
+      </div>
+      <div class="lane">
+        <span class="lanelabel" id="actlabel">Speech activity</span>
+        <canvas id="cAct" height="42"></canvas>
+      </div>
+      <div class="lane">
+        <span class="lanelabel">Candidate events <em id="evcount"></em></span>
+        <canvas id="cEvents" height="58"></canvas>
+      </div>
+      <div class="lane rulerlane">
+        <span class="lanelabel"></span>
+        <canvas id="cRuler" height="22"></canvas>
+      </div>
+      <canvas id="cPlay" class="playhead" height="208"></canvas>
+      <div id="tooltip" class="tooltip" hidden></div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="tablewrap">
+    <div class="filters">
+      <span class="fhead">Filter</span>
+      <label>type
+        <select id="fType"><option value="">all</option></select>
+      </label>
+      <label>state
+        <select id="fState"><option value="">all</option></select>
+      </label>
+      <label>review
+        <select id="fReview"><option value="">all</option></select>
+      </label>
+      <span id="shown" class="small"></span>
+    </div>
+    <table id="events">
+      <thead><tr>
+        <th scope="col">Start</th><th scope="col">End</th><th scope="col">Type</th>
+        <th scope="col">State</th><th scope="col">Signals</th>
+        <th scope="col">Review</th><th scope="col">Play</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section id="detail" class="detail" hidden aria-label="Selected event">
+    <h2 id="dTitle">Event</h2>
+    <div class="dgrid" id="dGrid"></div>
+    <div class="dactions">
+      <button id="dPlay">▶ Play event</button>
+      <button id="dReplay">⟲ Replay</button>
+      <span class="small">Read-only: use <code>senate-audio-audit review</code> to record a decision.</span>
+    </div>
+  </section>
+
+  <footer class="limitations" id="limitations"></footer>
+</main>
+
+<audio id="audio" preload="metadata"></audio>
+<script src="/app.js"></script>
+</body>
+</html>
