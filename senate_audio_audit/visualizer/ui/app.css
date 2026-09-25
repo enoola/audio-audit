@@ -1,0 +1,178 @@
+:root {
+  --bg: #0e1116;
+  --panel: #161b22;
+  --panel2: #1c2230;
+  --line: #2a3240;
+  --ink: #e6edf3;
+  --dim: #9aa7b4;
+  --faint: #6b7785;
+  --accent: #58a6ff;
+  --warn: #d29922;
+  --bad: #f85149;
+  --ok: #3fb950;
+  --speech: #2ea043;
+  --radius: 8px;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+code, .clock, output { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.boot { padding: 4rem; color: var(--dim); text-align: center; }
+
+main { max-width: 1500px; margin: 0 auto; padding: 1.25rem 1.5rem 4rem; }
+
+h1 { font-size: 1.05rem; margin: 0; font-weight: 600; word-break: break-all; }
+h2 { font-size: 0.95rem; margin: 0 0 0.5rem; }
+
+.dot { color: var(--faint); margin: 0 0.4rem; }
+.small { font-size: 0.8rem; color: var(--dim); }
+.spacer { flex: 1; }
+
+/* header */
+.bar {
+  display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 0.9rem; border-bottom: 1px solid var(--line);
+}
+.meta { margin: 0.25rem 0 0; color: var(--dim); font-size: 0.82rem; }
+.disclaimer {
+  flex: 1 1 380px; margin: 0; padding: 0.6rem 0.75rem;
+  background: #2a1f0b; border: 1px solid #6b4a12; border-left: 3px solid var(--warn);
+  border-radius: var(--radius); color: #f0d9a8; font-size: 0.8rem;
+}
+
+.badge {
+  display: inline-block; padding: 0.1rem 0.45rem; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em;
+  background: var(--panel2); border: 1px solid var(--line); color: var(--dim);
+}
+.badge.warn { background: #2a1f0b; border-color: #6b4a12; color: #f0d9a8; }
+.badge.bad  { background: #2d1214; border-color: #6e2028; color: #ffb3ad; }
+.badge.ok   { background: #0f2717; border-color: #1f6f34; color: #7ee787; }
+.badge.subtle { background: transparent; }
+
+/* alerts */
+.alerts { margin: 0.9rem 0 0; display: grid; gap: 0.4rem; }
+.alerts:empty { display: none; }
+.alert {
+  padding: 0.45rem 0.65rem; border-radius: var(--radius); font-size: 0.8rem;
+  background: var(--panel); border: 1px solid var(--line); color: var(--dim);
+}
+.alert.warn { border-left: 3px solid var(--warn); color: #f0d9a8; }
+.alert.bad  { border-left: 3px solid var(--bad); color: #ffb3ad; }
+
+/* transport */
+.transport {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+  margin: 1rem 0; padding: 0.7rem 0.85rem;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+}
+button, select, input[type=number] {
+  font: inherit; color: var(--ink); background: var(--panel2);
+  border: 1px solid var(--line); border-radius: 6px; padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+button:hover, select:hover { border-color: var(--accent); }
+button.primary { min-width: 3rem; font-size: 1rem; }
+button[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }
+input[type=number] { width: 5rem; cursor: text; }
+.clock { color: var(--dim); font-size: 0.85rem; }
+.transport label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--dim); }
+
+/* tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem; }
+.tile {
+  padding: 0.55rem 0.7rem; background: var(--panel);
+  border: 1px solid var(--line); border-radius: var(--radius);
+}
+.tile .k { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--faint); }
+.tile .v { font-family: var(--mono); font-size: 1.05rem; margin-top: 0.15rem; }
+.tile .n { font-size: 0.7rem; color: var(--dim); margin-top: 0.1rem; }
+.tile.warn { border-color: #6b4a12; }
+.tile.warn .v { color: #f0d9a8; }
+
+/* vividness */
+.vividness {
+  margin: 1rem 0; padding: 0.8rem 0.9rem;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.vhead { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.vlabel { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--faint); }
+.vscore { font-family: var(--mono); font-size: 1.6rem; font-weight: 600; }
+.meter { height: 6px; margin: 0.55rem 0 0.4rem; background: var(--panel2); border-radius: 3px; overflow: hidden; }
+.meterfill { height: 100%; width: 0; background: var(--warn); transition: width 0.3s; }
+
+/* timeline */
+.timeline { margin: 1.25rem 0; }
+.lanes { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.5rem 0.6rem 0.3rem; }
+.lane { position: relative; margin-bottom: 0.3rem; }
+.lanelabel {
+  display: block; font-size: 0.68rem; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--faint); margin-bottom: 0.15rem;
+}
+.lanelabel em { font-style: normal; text-transform: none; color: var(--dim); }
+/* Explicit heights are required, not cosmetic. With only `width: 100%`, a canvas
+   derives its rendered height from its intrinsic aspect ratio — and prep() rewrites
+   the backing store (width/height * devicePixelRatio) on every redraw, so the lanes
+   would drift to wrong heights as the ratio changed. Fixing the CSS height breaks
+   that feedback loop. */
+canvas { display: block; width: 100%; border-radius: 4px; background: #0b0e13; cursor: crosshair; }
+#cEnv { height: 86px; }
+#cAct { height: 42px; }
+#cEvents { height: 58px; }
+#cRuler { height: 22px; }
+/* The playhead spans the whole lane stack, so its height is set from JS to match the
+   measured lane block rather than being hard-coded. It MUST stay transparent: it is
+   an absolutely positioned overlay on top of the lanes, so the shared `canvas`
+   background rule would paint an opaque panel over every lane and label. */
+.playhead { position: absolute; top: 0; left: 0.6rem; right: 0.6rem; background: transparent; border-radius: 0; cursor: default; pointer-events: none; z-index: 3; }
+.tooltip {
+  position: absolute; z-index: 5; pointer-events: none; max-width: 340px;
+  padding: 0.4rem 0.55rem; background: #0b0e13; border: 1px solid var(--line);
+  border-radius: 6px; font-size: 0.76rem; box-shadow: 0 6px 18px #0008;
+}
+.tooltip b { color: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem; font-size: 0.75rem; color: var(--dim); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 0.3rem; vertical-align: -1px; }
+
+/* table */
+.tablewrap { margin: 1.25rem 0; }
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }
+.filters label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--dim); }
+.fhead { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--faint); }
+table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+th, td { padding: 0.4rem 0.55rem; text-align: left; border-bottom: 1px solid var(--line); }
+th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--faint); font-weight: 600; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--panel); }
+tbody tr.sel { background: #16233a; box-shadow: inset 2px 0 0 var(--accent); }
+td.num { font-family: var(--mono); color: var(--dim); }
+td button { padding: 0.15rem 0.45rem; font-size: 0.75rem; }
+
+/* detail */
+.detail {
+  margin: 1.25rem 0; padding: 0.9rem 1rem;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.6rem; }
+.dfield { padding: 0.45rem 0.6rem; background: var(--panel2); border-radius: 6px; }
+.dfield .k { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--faint); }
+.dfield .v { font-family: var(--mono); font-size: 0.85rem; margin-top: 0.1rem; word-break: break-word; }
+.dactions { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.8rem; flex-wrap: wrap; }
+
+.limitations {
+  margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line);
+  font-size: 0.78rem; color: var(--faint);
+}
+.limitations ul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

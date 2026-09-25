@@ -31,6 +31,7 @@ senate-audio-audit = "senate_audio_audit:main"
 [tool.hatch.build.targets.sdist]
 include = [
   "senate_audio_audit/**",
+  "senate_audio_audit/visualizer/ui/**",
   "tests/**",
   "scripts/**",
   "schemas/**",
@@ -44,6 +45,9 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["senate_audio_audit"]
+# The visualizer serves its HTML/CSS/JS from inside the package, so the assets
+# must ship in the wheel. Without this, / returns 404 from an installed build.
+artifacts = ["senate_audio_audit/visualizer/ui/*"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
